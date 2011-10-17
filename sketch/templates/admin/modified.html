@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Sketch > Etag{% endblock %}
+
+{% block content %}
+	<h1>Last-Modified Information</h1>
+	
+	<h2>Modified</h2>
+	<p>req: {{ req.If_Modified_Since }}</p>
+	<p>res: {{ res.Last_Modified }}</p>
+	
+	<h2>Request Info</h2>
+
+	
+	<h3>Test</h3>
+	<p><a href="/_session?action=test">test</a></p>
+	<p><a href="/_session?action=add">add</a></p>
+	<p><a href="/_session?action=create">create</a></p>
+{% endblock %}

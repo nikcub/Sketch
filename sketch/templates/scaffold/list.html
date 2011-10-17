@@ -1,0 +1,58 @@
+{% extends "admin.base.html" %}
+
+{% block admin %}
+		<table>
+			<thead>
+				<tr class="">
+					<td>Title</td>
+					<td>Source</td>
+					<td>Status</td>
+					<td>Delete</td>
+					<td>Parse</td>
+					<td>Details</td>
+				</tr>
+			</thead>
+			<tbody>
+		{% for story in stories %}
+			<tr id="source-{{ story.key }}" class="adminUserEntry">
+				
+				<td><a href="{{ story.url }}">{{ story.name }}</a></td>
+				<td>{{ story.source }}</td>
+				<td>{{ story.status }}</td>
+				<!-- <td>{{ source.hub_status }}</td> -->
+				<!-- <td>{{ source.created|date:"d b y" }}</td> -->
+				<!-- <td>{{ source.updated|timesince }}</td> -->
+				<!-- <td><a href="/admin/sources/messages/{{ source.key }}" class="adminButton">Log</a></td> -->
+				<!-- <td><a href="/admin/sources/status/{{ source.key }}" class="adminButton">Stat</a></td> -->
+				<!-- <td><a href="/admin/sources/resub/{{ source.key }}" class="adminButton">Resub</a></td> -->
+				<td>{{ link_to "edit", edit_post_path(post) }}
+				<td>{{ link_to "view", post }}
+				<td>{{ link_to "delete", post }}
+				<td>{{ content|raw }}
+				<td><form action="/admin/stories/{{ story.id }}" method="POST"><input type="hidden" name="action" value="delete"><input type="submit" value="Del" class="adminButton"/></form></td>
+				<!-- <td><form action="/admin/stories/{{ story.id }}" method="POST"><input type="hidden" name="action" value="parse"><input type="submit" value="Parse" class="adminButton"/></form></td> -->
+				<td><a href="/admin/stories/parse/{{ story.id }}" class="adminButton">Parse</a></td>
+				<td><a href="/admin/stories/details/{{ story.id }}" class="adminButton">Details</a></td>
+			</tr>
+		{% endfor %} 
+			</tbody>
+		</table>
+		<hr />
+{% endblock %}
+
+{% block sidebar %}
+<h3>Quick Find</h3>
+<form action="#">
+	<ul>
+		<li><input type="text" class="text" name="search" /></li>
+	</ul>
+</form>
+
+<h3>Quick Add Source</h3>
+<form action="/admin/stories" method="POST">
+	<ul>
+	<li><label for="email">URL</label><input type="text" name="url" /></li>
+	<li><label for="send">&nbsp;</label><input type="submit" name="send" value="add" id="send"/></li>
+	</ul>
+</form>
+{% endblock %}

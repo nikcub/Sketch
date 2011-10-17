@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Sketch > Globals{% endblock %}
+
+{% block content %}
+	<h1>Globals Information</h1>
+	
+	<h3>Global Cache</h3>
+	<p>{{ cache }}</p>
+	
+	<h3>Globals</h3>
+	<p>{{ globals }}</p>
+	
+	<h3>Globals Iter</h3>
+	{% for g in globals %}
+		<p>{{ g }}</p>
+	{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,110 @@
+/* Admin Area */
+
+/* Admin Menu */
+
+#adminMenu {
+	width: 100%;
+	height: 40px;
+	border-bottom: 2px solid black;
+}
+
+#adminMenu ul {
+	float: left;
+	list-style: none;
+	height: 40px;
+}
+
+#adminMenu ul li {
+	float: left;
+	font-size: 1.4em;
+	text-align: center;
+	width: 100px;
+	border-left: 1px solid #ccc;
+	height: 40px;
+	line-height: 40px;
+}
+
+#adminMenu ul li a, 
+#adminMenu ul li a:visited 
+{
+	width: 100%;
+
+	text-decoration: none;
+}
+
+#adminMenu ul .last {
+	border-right: 1px solid #ccc;
+}
+
+
+/* Main Admin Area form Stlingz */
+
+
+.admin ul {
+	list-style: none;
+}
+.admin h2,
+.admin h3 {
+	font-weight: bold;
+	margin: 10px 0 10px 0;
+}
+
+.admin h2 {
+	border-bottom: 1px solid black;
+}
+.admin form li {
+	float: left;
+	width: 100%;
+	line-height: 16px;
+	font-size: 9pt;
+/*	height: 20px;*/
+	margin-bottom: 5px;
+}
+.admin form label {
+	height: 20px;
+	float: left;
+	width: 20%;
+	text-align: right;
+	padding-right: 8px;
+	font-weight: bold;
+}
+
+.admin form input:not([type="submit"]) {
+/*	float: left;*/
+	width: 55%;
+	border: 2px solid #ccc;
+}
+
+#admin form input:focus {
+  border: 2px solid blue;
+}
+
+.admin textarea {
+/*	float: left;*/
+/*	clear: both;*/
+	width: 70%;
+	height: 100px;
+}
+
+.admin .storyImage {
+	float: left;
+	width: 150px;
+}
+
+.adminButton, 
+.adminButton a,
+.adminButton a:visited
+{
+	background: red;
+	border: 1px solid silver;
+	font-size: 11px;
+	text-decoration: none;
+	color: black;
+	padding: 3px 5px;
+}
+
+.admin iframe {
+	float: left;
+	width: 100%;
+	height: 250px;
+}

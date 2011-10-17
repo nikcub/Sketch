@@ -1,0 +1,1 @@
+/Users/nik/Projects/javascript/sha1/sha1.js

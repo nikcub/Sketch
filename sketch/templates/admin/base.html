@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" dir="lrt">
+<head>
+	<meta charset="utf-8" />
+	<title>{% block title %}Sketch > Admin{% endblock %}</title>
+	<!-- <link rel="stylesheet" type="text/css" href="/css/blueprint/screen.css" media="screen, projection" /> -->
+	<!-- <link rel="stylesheet" type="text/css" href="/css/blueprint/print.css" media="print" /> -->
+	<!--[if IE]>
+		<link rel="stylesheet" type="text/css" href="/blueprint/ie.css" media="screen, projection" />
+		<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<!-- <link rel="stylesheet" href="/css/blueprint/plugins/fancy-type/screen.css" type="text/css" media="screen, projection" />	 -->
+	<!-- <link rel="stylesheet" href="/css/blueprint/plugins/buttons/screen.css" type="text/css" media="screen, projection" />	 -->
+	
+</head>
+<body id="home">
+<div class="container">
+	<div id="header" class="span-24 last">
+		<div id="headerTitle"><a href="/"><h1>Sketch Admin</h1></a></div>
+		<div id="headerMenu">
+			<ul>
+					<li><a href="/account">@{{ username }}</a></li>
+					<li><a href='/login/clear' id='btnLogin'>Logout</a></li>
+				<li><a href='#' id=''>Feedback</a></li>
+				<li><a href='#' id=''>Homes</a></li>
+			</ul>
+		</div>
+	</div>
+	<div id="main" class="span-24 last">
+		{% if message %}<div id="msgError" class="{{ message_type }}">{{ message }}</div>{% endif %}
+		{% block content %}test{% endblock %}
+	</div>
+	<div id="footer" class="span-24 last">
+		<p class="center">Nik Cubrilovic | &copy; 2011</p>
+	</div>
+</div>
+</body>
+</html>

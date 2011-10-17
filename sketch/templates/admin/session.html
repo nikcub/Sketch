@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Sketch > Session{% endblock %}
+
+{% block content %}
+	<h1>Session Information</h1>
+	<p>
+		Actions: 
+		<a href="/_session?action=create">create</a>
+		<a href="/_session?action=destroy">destory</a>
+		<a href="/_session?action=del">delete</a> 
+		<a href="/_session?action=add">add</a> 
+		<a href="/_session?action=regen">regen</a> 
+	</p>
+	<h2>stash</h2>
+	<p>{{ stash }}</p>
+	<h3>Session Data</h3>
+	<p>test: {{ test }}</p>
+	<p>sess.ion.test: {{ session.test }}</p>
+	{% if session %}
+		<p>Have Session</p>
+		<h3>Session Data</h3>
+		{{ session }}
+	{% else %}
+		<p>No Session</p>
+	{% endif %}
+	
+	<h3>Cookie Data</h3>
+	{% if cookie %}
+		<p> {{ cookie }} </p>
+	{% else %}
+		<p>No cookie :(</p>
+	{% endif %}
+	
+
+{% endblock %}

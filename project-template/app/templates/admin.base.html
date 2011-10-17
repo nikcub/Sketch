@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Evergreen > Admin{% endblock %}
+
+{% block subheader %}
+<div id="adminMenu" class="span-24 last">
+<ul>
+	<li>Admin</li>
+	<li><a href="/admin/users">Users</a></li>
+	<li class="last"><a href="/admin/posts">Posts</a></li>
+</ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="admin" class="span-18 admin">
+	{% if message %}<div id="msgError" class="{{ message_type }} {{ message_class}}">{{ message }}</div>{% endif %}
+	
+	{% block admin %}
+	{% endblock %}
+</div>
+<div class="span-6 last">
+	{% block sidebar %}
+	{% endblock %}
+</div>
+{% endblock %}

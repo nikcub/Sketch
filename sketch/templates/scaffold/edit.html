@@ -1,0 +1,75 @@
+{% extends "admin.base.html" %}
+
+{% block admin %}	
+	<form action="/admin/stories/{{ story.id }}" method="POST">
+		<h2>Details</h2>
+		<ul>
+		<li><label for="username">Key</label><span>{{ story.id }}</span></li>
+		<li><label for="email">Title</label><input type="text" name="title" value="{{ story.title }}" /></li>
+		<li><label for="email">Url</label><input type="text" name="url" value="{{ story.url }}" /> [<a href="{{ story.url }}">Link</a>]</li>
+		<li><label for="email">Tags</label><input type="text" name="tags" value="{{ story.tags }}" /></li>
+		<li><label for="email">PubDate</label><input type="text" name="pubdate" value="{{ story.pubdate|date:"Y-m-d" }}" /></li>
+		<li><label for="email">Featured</label><input type="checkbox" name="featured" {% if story.featured %}CHECKED{%endif%} /></li>
+		
+		<!-- <li><label for="email">Tags</label><input type="text" name="url" value="{{ story.tags }}" /></li> -->
+		<!-- <li><label for="email">Website</label><input type="text" name="url" value="{{ story.web_url }}" /></li> -->
+		<!-- <li><label for="password">Favicon</label><input type="text" name="favicon" value="{{ story.favicon }}" /></li> -->
+		</ul>
+		<ul>
+			<li>
+				<label for="send">&nbsp;</label>
+				<button type="submit" name="action" value="_update" tabindex="1" accesskey="U" class="positive"><img src="/img/tick.png"/> Update</button>
+				<button type="submit" name="action" value="_parse" tabindex="1" accesskey="U" class="positive"><img src="/img/tick.png"/> Parse</button>
+				<button type="submit" name="action" value="_parse_cache" tabindex="1" accesskey="U" class="positive"><img src="/img/tick.png"/> Parse Cache</button>
+				<button type="submit" name="action" value="_disable" tabindex="4" accesskey="D" class="negative"><img src="/img/cross.png"/> Delete</button>
+			</li>
+		</ul>
+		
+		<h3>Summary</h3>
+		<textarea name="summary">{{ story.summary|escape }}</textarea>
+
+		<h3>Content</h3>
+		<textarea name="summary">{{ story.content|escape }}</textarea>
+		<textarea name="summary">{{ story.content_raw|escape }}</textarea>
+		
+		<h3>Image</h3>
+		<ul>
+				<li><label for="email">URL</label><input type="text" name="image_orig" value="{{ story.image_orig }}" /></li>
+				{% if story.image_orig %}
+				<li><label for="email"> </label><img src="{{ story.image_orig }}" class="storyImage"/></li>
+				{% endif %}
+		</ul>
+		
+		<ul>
+			<li><label for="send">&nbsp;</label><input type="submit" name="send" value="update" id="send"/></li>
+		</ul>
+		
+		<!-- <h3>Content</h3> -->
+		<!-- <textarea>{{ story.content_raw|escape }}</textarea> -->
+		<!-- <ul> -->
+		<!-- <li><label for="password">Type</label> {{ story.web_content_type }}</li> -->
+		<!-- <li><label for="password">Charset</label> {{ story.web_content_charset }}</li> -->
+		<!-- <li></li> -->
+		<!-- <li><textarea>{{ story.content_parsed|escape }}</textarea></li> -->
+		<!-- <li>{{ story.content_parsed }}</li> -->
+		<!-- <li><textarea>{{ story.feed_content|escape }}</textarea></li> -->
+		<!-- <li><iframe src="/admin/storys/web_content/{{ story.key }}"></iframe></li> -->
+		<!-- <li><iframe src="/admin/storys/feed_content/{{ story.key }}"></iframe></li> -->
+		<!-- <ul> -->
+		<!-- <li><label for="send">&nbsp;</label><input type="submit" name="send" value="update" id="send"/></li> -->
+		<!-- </ul> -->
+	</form>
+	<h3>Tags</h3>
+	<form action="/tags/{{ story.id }}" method="POST">
+
+			<ul>
+			{% for tag in story_tags %}
+				<li>{{ tag }}</li>
+			{% endfor %}
+			</ul>
+	
+		<ul>
+		<li><label for="add"><input type="text" name="tag"></label><input type="submit" name="add" value="add" id="send"/></li>
+		</ul>
+	</form>
+{% endblock %}
