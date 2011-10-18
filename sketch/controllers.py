@@ -3,8 +3,9 @@ import os, logging, traceback, sys, cgi, datetime, urllib
 import sketch
 
 from google.appengine.ext import webapp
-from google.appengine.ext.webapp import template
 
+from django.utils.timesince import timesince
+from django.utils.dateformat import format as django_format
 
 class BaseController(sketch.RequestHandler):
 
@@ -87,6 +88,9 @@ class BaseController(sketch.RequestHandler):
 
     prettyPrint = bool(self.request.get('prettyPrint', False))
     
+    if hasattr(self, 'template_wrapper'):
+      passed_vars = self.template_wrapper(variables = passed_vars)
+          
     if response_type in ['xml', 'json']:
       serial_f = getattr(serialize, response_type)
       content = serial_f(passed_vars, pretty = prettyPrint)
@@ -97,7 +101,14 @@ class BaseController(sketch.RequestHandler):
       template_path = self.get_template_path(template_name)
       content = self.render_jinja(template_path, template_name, passed_vars)
 
+      
+    self.render_content(content, response_code)
+
+  def render_content(self, content, response_code = 200, headers = []):
     self.response.clear()
+    if len(headers) > 0:
+      for hn, hv in headers:
+        self.response.headers[hn] = hv
     self.response.set_status(response_code)
     self.response.write(content)
 
@@ -146,6 +157,9 @@ class BaseController(sketch.RequestHandler):
 
 
   def get_template_path(self, template_name, template_type = 'app'):
+    if hasattr(self, 'template_folder'):
+      template_type = self.template_folder
+
     base = os.path.dirname(__file__)
     if template_type in self.app.config['templates']:
       template_dir = self.app.config['templates'][template_type]
@@ -163,22 +177,18 @@ class BaseController(sketch.RequestHandler):
 
 
   def render_jinja(self, template_path, template_name, vars):
-    # env = jinja2.Environment(loader=jinja2.PackageLoader('evergreen', 'templates'))
-
-    # logging.info("Jinja: template path is %s" % template_path)
-    
-    # TODO better support of vendor things..
-    
     from sketch.vendor import jinja2
     
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
-    # from sketch.utils import timesince
-    # env.filters['timesince'] = timesince
+    env.filters['timesince'] = timesince
+    env.filters['tformat'] = django_format
     template = env.get_template(template_name + '.html')
     return template.render(vars)
 
 
   def render_django(self, template_name, vars, response_type = False):
+    from google.appengine.ext.webapp import template
+    
     if not response_type:
         response_type = self.request.response_type()
     vars = self.get_template_vars(vars)

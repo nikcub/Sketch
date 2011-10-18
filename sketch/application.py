@@ -24,7 +24,7 @@ class Application(object):
   Base Application Class
   """
 
-  ALLOWED_METHODS = frozenset(['GEST', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'TRACE'])
+  ALLOWED_METHODS = frozenset(['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'TRACE'])
 
   static_uri = '/static'
 
