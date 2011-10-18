@@ -4,6 +4,9 @@ import sys
 import logging
 import traceback
 
+from os.path import join as j_dir
+from os.path import dirname
+
 import sketch
 
 from .util import import_string
@@ -96,20 +99,36 @@ class Application(object):
     self.routes = self.get_routes()
     self.router = self.router_class(self, self.routes)
 
-    self.set_template_paths()
+    # Config
+    self.config = self.set_config_paths(self.config)
+    self.config.save_config()
+
     self.set_vendor()
-
     self._handlers = {}
-
     Application.app = self
 
 
   def get_routes(self, routes = None):
     return self.import_app_module_new('routes', 'routes')
 
-  def set_template_paths(self):
+
+
+  def set_config_paths(self, config):
     # TODO pre-load all template paths here from config
-    self.sketch_template_path = os.path.join(os.path.dirname(__file__), self.sketch_template_folder)
+    paths = {}
+    if not 'paths' in config:
+      config['paths'] = {}
+    paths['sketch_base_dir'] = sketch_dir = dirname(__file__)
+    paths['app_base_dir'] = app_dir = j_dir(sketch_dir, '..', self.app_name)
+    paths['sketch_template_dir'] = j_dir(sketch_dir, self.sketch_template_folder)
+    paths['app_template_basedir'] = j_dir(app_dir, self.sketch_template_folder)
+    
+    for path in paths:
+      p = os.path.normpath(paths[path])
+      if os.path.isdir(p) and path not in config['paths']:
+        config['paths'][path] = p
+      
+    return config
 
   def set_package(self, package_dir):
     # Append zip archives to path for zipimport
