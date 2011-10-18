@@ -1,4 +1,6 @@
-
+import os
+import sys
+import random
 import hashlib
 
 def bcrypt(password, salt = "abcdefghijklmnopqrstuvwxyz", iterations=5000):

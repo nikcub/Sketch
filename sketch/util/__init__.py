@@ -7,6 +7,7 @@ import re
 import hashlib
 
 from .object import hasmethod, hasvar, getmethattr
+from .security import bcrypt, file_hash, generate_password
 
 from sketch.vendor.BeautifulSoup import BeautifulSoup
 import sketch.vendor.feedparser
@@ -375,7 +376,7 @@ def get_valid_methods(handler):
     method.lower().replace('-', '_'), None)]
 
 
-def import_string(import_name, silent=False):
+def import_string_two(import_name, silent=False):
   """Imports an object based on a string. If *silent* is True the return
   value will be None if the import fails.
 
