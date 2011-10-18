@@ -73,3 +73,5 @@ class Config(dict):
 
     dict.__init__(self, conf)
     
+  def save_config(self):
+    stash.set(self.cache_key, self)
