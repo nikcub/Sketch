@@ -2,4 +2,5 @@
 v0.2.4:
 	* support looking up reference property without requesting 
 		http://appengine-cookbook.appspot.com/recipe/getting-dbreferenceproperty-key-without-loading-entity
-		
+		fabric scripts
+port start.sh and deploy.sh to fabric
