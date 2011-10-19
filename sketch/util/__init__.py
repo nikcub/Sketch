@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+#
+# Copyright (c) 2010-2011, Nik Cubrilovic. All rights reserved.
+# <nikcub@gmail.com> <http://nikcub.appspot.com>  
+#
+
+"""Sketch Utility methods
+
+
+  TODO  break up into packages  
+"""
+
 import random
 import logging
 import urllib
@@ -37,7 +49,56 @@ def extract_dataurl(dataurl):
   return (img_dat, img_type)
 
 
-    
+
+
+def urlunsplit(scheme=None, netloc=None, path=None, query=None, fragment=None):
+  """Similar to ``urlparse.urlunsplit``, but will escape values and
+  urlencode and sort query arguments.
+
+  :param scheme:
+    URL scheme, e.g., `http` or `https`.
+  :param netloc:
+    Network location, e.g., `localhost:8080` or `www.google.com`.
+  :param path:
+    URL path.
+  :param query:
+    URL query as an escaped string, or a dictionary or list of key-values
+    tuples to build a query.
+  :param fragment:
+    Fragment identifier, also known as "anchor".
+  :returns:
+    An assembled absolute or relative URL.
+  """
+  if not scheme or not netloc:
+    scheme = None
+    netloc = None
+
+  if path:
+    path = urllib.quote(to_utf8(path))
+
+  if query and not isinstance(query, basestring):
+    if isinstance(query, dict):
+      query = query.items()
+
+    query_args = []
+    for key, values in query:
+      if isinstance(values, basestring):
+        values = (values,)
+
+      for value in values:
+        query_args.append((to_utf8(key), to_utf8(value)))
+
+    # Sorting should be optional? Sorted args are commonly needed to build
+    # URL signatures for services.
+    query_args.sort()
+    query = urllib.urlencode(query_args)
+
+  if fragment:
+    fragment = urllib.quote(to_utf8(fragment))
+
+  return urlparse.urlunsplit((scheme, netloc, path, query, fragment))
+
+
 
 
 def escape(s, quote=False):
@@ -256,6 +317,13 @@ def format_string(string, context):
     return x
   return _format_re.sub(lookup_arg, string)
 
+
+
+#---------------------------------------------------------------------------
+#   Modules, Packages, etc.
+#---------------------------------------------------------------------------
+
+
 def import_string(import_name, silent=False):
   """Imports an object based on a string.  This is useful if you want to
   use import paths as endpoints or something similar.  An import path can
@@ -291,6 +359,21 @@ def import_string(import_name, silent=False):
     if not silent:
       raise
 
+def set_package(self, package_dir):
+  """Find all packages in a directory and add them to import paths so that 
+  they can be imported by the application
+  
+  :param package_dir: the package directory
+  """
+  for filename in os.listdir(package_dir):
+    if filename.endswith((".zip", ".egg")):
+      sys.path.insert(0, "%s/%s" % (package_dir, filename))
+
+
+def clear_path(self):
+  sys.path = [path for path in sys.path if 'site-packages' not in path]
+
+
 def iter_modules(path):
   """Iterate over all modules in a package.
   :from: werkzeug._internal
@@ -312,6 +395,7 @@ def iter_modules(path):
         if modname not in found:
           found.add(modname)
           yield modname, ispackage(modname)
+
 
 def find_modules(import_path, include_packages=False, recursive=False):
   """Find all the modules below a package.    This can be useful to
@@ -345,6 +429,52 @@ def find_modules(import_path, include_packages=False, recursive=False):
       yield modname
 
 
+def import_object(name):
+  """Imports an object by name.
+
+  import_object('x.y.z') is equivalent to 'from x.y import z'.
+
+  >>> import tornado.escape
+  >>> import_object('tornado.escape') is tornado.escape
+  True
+  >>> import_object('tornado.escape.utf8') is tornado.escape.utf8
+  True
+  """
+  parts = name.split('.')
+  obj = __import__('.'.join(parts[:-1]), None, None, [parts[-1]], 0)
+  return getattr(obj, parts[-1])
+
+def import_string_two(import_name, silent=False):
+  """Imports an object based on a string. If *silent* is True the return
+  value will be None if the import fails.
+
+  Simplified version of the function with same name from `Werkzeug`_.
+
+  :param import_name:
+    The dotted name for the object to import.
+  :param silent:
+    If True, import errors are ignored and None is returned instead.
+  :returns:
+    The imported object.
+  """
+  import_name = to_utf8(import_name)
+  try:
+    if '.' in import_name:
+      module, obj = import_name.rsplit('.', 1)
+      return getattr(__import__(module, None, None, [obj]), obj)
+    else:
+      return __import__(import_name)
+  except (ImportError, AttributeError):
+    if not silent:
+      raise
+
+
+
+#---------------------------------------------------------------------------
+#   HTTP, etc.
+#---------------------------------------------------------------------------
+
+
 def abort_old(code, *args, **kwargs):
   """Raises an ``HTTPException``. The exception is instantiated passing
   *args* and *kwargs*.
@@ -376,29 +506,10 @@ def get_valid_methods(handler):
     method.lower().replace('-', '_'), None)]
 
 
-def import_string_two(import_name, silent=False):
-  """Imports an object based on a string. If *silent* is True the return
-  value will be None if the import fails.
 
-  Simplified version of the function with same name from `Werkzeug`_.
-
-  :param import_name:
-    The dotted name for the object to import.
-  :param silent:
-    If True, import errors are ignored and None is returned instead.
-  :returns:
-    The imported object.
-  """
-  import_name = to_utf8(import_name)
-  try:
-    if '.' in import_name:
-      module, obj = import_name.rsplit('.', 1)
-      return getattr(__import__(module, None, None, [obj]), obj)
-    else:
-      return __import__(import_name)
-  except (ImportError, AttributeError):
-    if not silent:
-      raise
+#---------------------------------------------------------------------------
+#   Unicode, Character Encoding
+#---------------------------------------------------------------------------
 
 
 def to_utf8(value):
@@ -434,50 +545,3 @@ def to_unicode(value):
   assert isinstance(value, unicode)
   return value
 
-
-def urlunsplit(scheme=None, netloc=None, path=None, query=None, fragment=None):
-  """Similar to ``urlparse.urlunsplit``, but will escape values and
-  urlencode and sort query arguments.
-
-  :param scheme:
-    URL scheme, e.g., `http` or `https`.
-  :param netloc:
-    Network location, e.g., `localhost:8080` or `www.google.com`.
-  :param path:
-    URL path.
-  :param query:
-    URL query as an escaped string, or a dictionary or list of key-values
-    tuples to build a query.
-  :param fragment:
-    Fragment identifier, also known as "anchor".
-  :returns:
-    An assembled absolute or relative URL.
-  """
-  if not scheme or not netloc:
-    scheme = None
-    netloc = None
-
-  if path:
-    path = urllib.quote(to_utf8(path))
-
-  if query and not isinstance(query, basestring):
-    if isinstance(query, dict):
-      query = query.items()
-
-    query_args = []
-    for key, values in query:
-      if isinstance(values, basestring):
-        values = (values,)
-
-      for value in values:
-        query_args.append((to_utf8(key), to_utf8(value)))
-
-    # Sorting should be optional? Sorted args are commonly needed to build
-    # URL signatures for services.
-    query_args.sort()
-    query = urllib.urlencode(query_args)
-
-  if fragment:
-    fragment = urllib.quote(to_utf8(fragment))
-
-  return urlparse.urlunsplit((scheme, netloc, path, query, fragment))
