@@ -393,6 +393,12 @@ class RequestHandler(object):
     self.response = response
     self.__uploads = None
 
+
+  @property
+  def is_ajax(self):
+    return self.request.is_ajax()
+
+
   def error(self, code):
     """Clears the response output stream and sets the given HTTP error
     code. This doesn't stop code execution; the response is still
@@ -403,6 +409,7 @@ class RequestHandler(object):
     """
     self.response.set_status(code)
     self.response.clear()
+
 
   def abort(self, code, *args, **kwargs):
     """Raises an :class:`HTTPException`. This stops code execution,
@@ -416,6 +423,7 @@ class RequestHandler(object):
         Keyword arguments to be passed to the exception class.
     """
     abort(code, *args, **kwargs)
+
 
   def redirect(self, uri, permanent=False, abort=False, code=302):
     """Issues an HTTP redirect to the given relative URL. This won't stop
@@ -444,6 +452,7 @@ class RequestHandler(object):
     self.response.set_status(code)
     self.response.clear()
 
+
   def redirect_to(self, _name, _permanent=False, _abort=False, *args, **kwargs):
     """Convenience method mixing :meth:`redirect` and :meth:`url_for`:
     Issues an HTTP redirect to a named URL built using :meth:`url_for`.
@@ -463,6 +472,17 @@ class RequestHandler(object):
     """
     url = self.url_for(_name, *args, **kwargs)
     self.redirect(url, permanent=_permanent, abort=_abort)
+
+
+  def redirect_back(self):
+    """Conveniance method for redirecting back to the referring page
+    
+    @TODO use 307 on redirect?
+    @TODO do not trust the referrer - use session info
+    """
+    re = self.request.environ.get('HTTP_REFERER', '/')
+    self.redirect(re, code = 303, permanent=False)
+
 
   def url_for(self, _name, *args, **kwargs):
     """Builds and returns a URL for a named :class:`Route`.
@@ -526,12 +546,14 @@ class RequestHandler(object):
     """
     return self.app.router.build(_name, self.request, args, kwargs)
 
+
   def get_config(self, module, key=None, default=object()):
     """Returns a configuration value for a module.
 
     .. seealso:: :meth:`Config.get_config`.
     """
     return self.app.config.get_config(module, key=key, default=default)
+
 
   def handle_exception(self, exception, debug_mode):
     """Called if this handler throws an exception during execution.
@@ -545,6 +567,7 @@ class RequestHandler(object):
         True if the web application is running in debug mode.
     """
     raise
+
 
   def get_uploads(self, field_name=None):
     """
