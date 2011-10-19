@@ -46,6 +46,7 @@ from .session import Session
 from .model import Model
 from .application import Application
 from .users import User
+import debug
 
 from google.appengine.dist import use_library
 use_library('django', '0.96')
