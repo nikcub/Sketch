@@ -93,7 +93,6 @@ class Application(object):
     if not os.path.isfile(config_file):
       raise Exception("Not a valid project_path %s" % config_file)
     self.config = sketch.Config(config_file, refresh = self.debug)
-
     self.debug = self.config.get('debug', debug)
 
     # Appname
@@ -111,7 +110,9 @@ class Application(object):
 
     # Config
     self.config = self.set_config_paths(self.config)
-    self.config.save_config()
+    self.config = self.set_config_template_paths(self.config)
+    # TODO fix save config
+    # self.config.save_config()
 
     self.set_vendor()
     self._handlers = {}
@@ -135,10 +136,9 @@ class Application(object):
     
     :param config: Config object to add path information to
     """
+    config = self.assure_obj_child_dict(config, 'paths')
+    
     paths = {}
-    if not 'paths' in config or type(config['paths']) != type({}):
-      config['paths'] = {}
-
     paths['sketch_base_dir'] = sketch_dir = dirname(__file__)
     paths['site_base_dir'] = site_dir = j_dir(dirname(__file__), '..')
     paths['app_base_dir'] = app_dir = j_dir(site_dir, self.app_name)
@@ -150,13 +150,34 @@ class Application(object):
       p = os.path.normpath(paths[path])
       if os.path.isdir(p) and not path in config['paths']:
         config['paths'][path] = p
-    
-    for template in config['templates']:
-      p = os.path.normpath(j_dir(site_dir, config['templates'][template]))
-      if os.path.isdir(p):
-        config['paths']['template_' + template] = p
 
     return config
+
+
+  def set_config_template_paths(self, config):
+    """Sets the paths to templates in the config
+    
+    Returns a new :class:`Config` object
+    
+    :param config: Config object
+    """
+    config['paths'] = self.assure_obj_child_dict(config['paths'], 'templates')
+    templates = {}
+
+    for template in config.templates:
+      p = os.path.normpath(j_dir(config.paths.site_base_dir, config.templates[template]))
+      if os.path.isdir(p):
+        config['paths']['templates'][template] = p
+    
+    return config
+
+
+  def assure_obj_child_dict(self, obj, var):
+    """Assure the object has the specified child dict
+    """
+    if not var in obj or type(obj[var]) != type({}):
+      obj[var] = {}
+    return obj
 
 
   def set_vendor(self, vendor_dir = None):
