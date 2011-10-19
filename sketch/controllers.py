@@ -13,16 +13,19 @@ from google.appengine.ext import webapp
 from django.utils.timesince import timesince
 from django.utils.dateformat import format as django_format
 
-class BaseController(sketch.RequestHandler):
 
+class BaseController(sketch.RequestHandler):
+  """BaseController default application controller that is inherited for other
+  controllers. Implements requests, response, rendering, plugins etc.
+  
+  """
+  
   _Plugins = {}
   message = False
   message_type = None
 
-  # Hooks
   def pre_hook(self):
     self.reg_messages()
-    # self.session = sketch.Session()
 
   def post_hook(self):
     self.session.save()
@@ -49,16 +52,7 @@ class BaseController(sketch.RequestHandler):
       del self.session['message_class']
       self.session.save()
 
-  # TODO use 307 on redirect?
-  # TODO use session info here and do not trust referrer
-  def redirect_back(self):
-    re = self.request.environ.get('HTTP_REFERER', '/')
-    self.redirect(re, code = 303)
 
-
-  @property
-  def is_ajax(self):
-    return self.request.is_ajax()
 
   #---------------------------------------------------------------------------
   #   messages
@@ -80,12 +74,9 @@ class BaseController(sketch.RequestHandler):
 
 
   #---------------------------------------------------------------------------
-  #   rendering
+  #   Rendering
   #---------------------------------------------------------------------------
 
-  # TODO - build template path, then render
-
-  # TODO - fuck all this up and throw it away
 
   def render(self, template_name, passed_vars, response_code = 200, 
           response_type = False, prettyPrint = False, template_folder=None):
@@ -110,7 +101,10 @@ class BaseController(sketch.RequestHandler):
       # fixing..
       template_path = self.get_template_dir(template_folder)
       content = self.render_jinja(template_path, template_name, passed_vars)
-      
+    
+    logging.info("%s - %s" % (template_path, template_name))
+    logging.info(content)
+    
     self.render_content(content, response_code)
 
 
@@ -137,13 +131,13 @@ class BaseController(sketch.RequestHandler):
 
 
   def render_admin(self, template_name, vars):
-    # TODO change this and make it *better*
+    return self.render(template_name, vars, template_folder='admin')
+
+
+  def render_sketch(self, template_name, vars):
     vars['admin'] = True
-    template_path = self.get_template_path(template_name, 'admin')
-    content = self.render_jinja(template_path, template_name, vars)
-    self.response.clear()
-    self.response.set_status(200)
-    self.response.write(content)
+    return self.render(template_name, vars, template_folder='sketch')
+
 
   def render_blob(self, blob_key_or_info, filename=None):
     """Render a file from the GAE blobstore
@@ -177,32 +171,6 @@ class BaseController(sketch.RequestHandler):
     self.response.clear()
 
 
-  def get_template_dir(self, template_folder=None):
-    """Given a template name return a full path to the template directory.
-    Template folders are alises defined in config or within the applications.
-    
-    :param template_name: name of template
-    :param template_folder: template folder
-    """
-    if not template_folder and hasattr(self, 'template_folder'):
-      template_folder = getmethattr(self, 'template_folder')
-      
-    if template_folder in self.app.config.paths.templates:
-      template_dir = self.app.config.paths.templates[template_folder]
-    elif 'app_template_basedirs' in self.app.config.paths:
-      if isdir(dj(self.app.config.paths['app_template_basedir'], template_folder)):
-        template_dir = dj(self.app.config.paths['app_template_basedir'], template_folder)
-    elif 'app_template_default' in self.app.config['paths']:
-      template_dir = self.app.config['paths']['app_template_default']
-    else:
-      raise Exception("Could not find template to use: given %s" % template_folder)
-
-    if not os.path.isdir(template_dir):
-      raise Exception("Not a template path: %s. Please specify the template path in config", templates_path)
-
-    return template_dir
-
-
   def render_jinja(self, template_path, template_name, vars):
     from sketch.vendor import jinja2
     
@@ -234,6 +202,30 @@ class BaseController(sketch.RequestHandler):
   #---------------------------------------------------------------------------
 
 
+  def get_template_dir(self, template_folder=None):
+    """Given a template name return a full path to the template directory.
+    Template folders are alises defined in config or within the applications.
+    
+    :param template_name: name of template
+    :param template_folder: template folder
+    """
+    if not template_folder and hasattr(self, 'template_folder'):
+      template_folder = getmethattr(self, 'template_folder')
+      
+    if template_folder in self.app.config.paths.templates:
+      template_dir = self.app.config.paths.templates[template_folder]
+    elif 'app_template_basedir' in self.app.config.paths:
+      if isdir(dj(self.app.config.paths['app_template_basedir'], template_folder)):
+        template_dir = dj(self.app.config.paths['app_template_basedir'], template_folder)
+    elif 'app_template_default' in self.app.config['paths']:
+      template_dir = self.app.config['paths']['app_template_default']
+    else:
+      raise Exception("Could not find template to use: given %s" % template_folder)
+
+    if not os.path.isdir(template_dir):
+      raise Exception("Not a template path: %s. Please specify the template path in config", templates_path)
+
+    return template_dir
 
 
   def get_template_vars(self, vars):
@@ -263,6 +255,7 @@ class BaseController(sketch.RequestHandler):
 
     return dict(vars, **additional)
 
+
   def get_plugin_vars(self, vars):
     for plugin in self._Plugins:
       if hasattr(self._Plugins[plugin], "render"):
@@ -275,11 +268,13 @@ class BaseController(sketch.RequestHandler):
               logging.error("Did not get a valid dict type from plugin %s" % plugin)
     return vars
 
+
   def get_param_dict(self):
     params = {}
     for argument in self.request.arguments():
       params[argument] = self.request.get(argument)
     return params
+
 
   def handle_exception(self, exception = None, errno = None, strerror = None):
     """Called if this handler throws an exception during execution.
@@ -303,6 +298,34 @@ class BaseController(sketch.RequestHandler):
     self.render_error(message = lines, code = 500)
 
 
+  
+  #---------------------------------------------------------------------------
+  #   Conveniance Methods
+  #---------------------------------------------------------------------------
+
+  @property
+  def debug(self):
+    return self.config.is_debug
+
+  @property
+  def is_dev(self):
+    return self.config.is_dev
+    
+  @property
+  def is_staging(self):
+    return self.config.is_staging
+    
+  @property
+  def is_live(self):
+    return self.config.is_live
+    
+  @property
+  def env(self):
+    return self.config.enviro['name'] or None
+
+  @property
+  def enviro(self):
+    return self.config.enviro
 
 
 class AdminController(BaseController):

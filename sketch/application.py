@@ -14,7 +14,7 @@ from .util import import_string
 from google.appengine.ext.webapp.util import run_bare_wsgi_app
 from google.appengine.ext.webapp import WSGIApplication
 from google.appengine.runtime import DeadlineExceededError
-
+from google.appengine.api import app_identity
 
 class AppAuthError(Exception):
   pass
@@ -43,8 +43,6 @@ class Application(object):
   app_template_path = None
 
   sketch_template_path = None
-
-  debug = False
 
   # pointer to app instance
   app = None
@@ -82,39 +80,36 @@ class Application(object):
     :param debug: (optional) debug mode for the aplication
     :param routes: (optional) default routes
     """
-
-    self.debug = debug or os.environ.get('SERVER_SOFTWARE', '').startswith('Dev')
-
-    if self.debug:
-      logging.getLogger().setLevel(logging.INFO)
-
     # Config
-    # TODO try loading default config if none specified
+    # @TODO try loading default config if none specified
+    # @TODO intelligent caching so that we don't always reparse config
     if not os.path.isfile(config_file):
       raise Exception("Not a valid project_path %s" % config_file)
-    self.config = sketch.Config(config_file, refresh = self.debug)
-    self.debug = self.config.get('debug', debug)
+    self.config = sketch.Config(config_file, refresh = debug)
 
     # Appname
+    # @TODO do away with appname
     self.app_name = self.config.get('appname', False) or app_name
     if not self.app_name:
       raise Exception, "Could not get application name"
 
     # Plugins
-    if self.config['plugins']:
+    if 'plugins' in self.config:
       plugins = self.import_app_module('plugins', 'plugins', silent = True)
       self._init_plugins(plugins)
 
+    # Routing
     self.routes = self.get_routes()
     self.router = self.router_class(self, self.routes)
 
     # Config
     self.config = self.set_config_paths(self.config)
     self.config = self.set_config_template_paths(self.config)
-    # TODO fix save config
+    # @TODO fix save config
     # self.config.save_config()
 
     self.set_vendor()
+
     self._handlers = {}
     Application.app = self
 
@@ -127,6 +122,37 @@ class Application(object):
     :param routes: (optional) path to module or object with routing info
     """
     return self.import_app_module_new('routes', 'routes')
+
+
+  def set_environ(self, enviroments):
+    """Returns the running environment and sets debug options, hostname etc.
+    
+    :param env: Defined environments in config
+    """
+    enviro_set = False
+    self.config.hostname = hostname = self.get_current_hostname()
+    self.config.appid = app_identity.get_application_id()
+    self.config.gae_hostname = app_identity.get_default_version_hostname()
+    
+    for env in enviroments:
+      self.config['enviroments'][env]['name'] = env
+      if 'hosts' in enviroments[env] and hostname in enviroments[env]['hosts']:
+        self.config.set_enviro = env
+        enviro_set = True
+    
+    # logging.info(self.config.enviro)
+    # logging.info("%s - %s - %s" % (hostname, id_gae, host_gae))
+    # self.debug = self.config.get('debug', debug)
+    # self.debug = debug or os.environ.get('SERVER_SOFTWARE', '').startswith('Dev')
+
+
+  def setup_logging(self, debug=False):
+    """Setup application logging level based on being in debug mode or not
+    
+    :param debug: (optional) If debug is one then log more info
+    """
+    if debug:
+      logging.getLogger().setLevel(logging.INFO)
 
 
   def set_config_paths(self, config):
@@ -181,11 +207,39 @@ class Application(object):
 
 
   def set_vendor(self, vendor_dir = None):
+    """Sets a vendor directory containing third-party modules and files into the 
+    system path so that they can be imported directly
+    
+    :param vendor_dir: full path to directory to import
+    """
     if not vendor_dir:
       vendor_dir = os.path.join(os.path.dirname(__file__), self.vendor_path)
     if os.path.isdir(vendor_dir):
       sys.path.insert(0, vendor_dir)
 
+
+  def get_current_hostname(self, port=False):
+    """Returns the current hostname 
+    
+    :param port: (optional) include port information
+    """
+    if self.request and 'HTTP_HOST' in self.request.environ:
+      host_full = self.request.environ['HTTP_HOST'] or 'localhost'
+      hostname = host_full.split(':')[0]
+    else:
+      hostname = 'localhost'
+    
+    return hostname
+
+
+  @property
+  def debug(self):
+    """Conveniance method to return current debug level
+    
+    """
+    if 'debug' in self.config:
+      return self.config.debug
+    return False
 
   def import_app_module_new(self, module, obj = None):
     # TODO work out what went wrong here
@@ -198,7 +252,6 @@ class Application(object):
     if obj:
       imp = "%s:%s" % (imp, obj)
     try:
-      logging.info(imp)
       ret = import_string(imp, silent)
     except AttributeError, e:
       logging.info("Import Error: %s" % str(e))
@@ -348,6 +401,9 @@ class Application(object):
     Application.request = request = self.request_class(environ)
     response = self.response_class()
 
+    if 'enviroments' in self.config:
+      self.set_environ(self.config.enviroments)
+      
     try:
       if request.method not in self.ALLOWED_METHODS:
         raise sketch.exception.NotImplemented()
