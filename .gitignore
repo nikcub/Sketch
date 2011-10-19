@@ -6,3 +6,5 @@ var/
 .DS_Store
 start.sh
 vendor
+js-lib
+js-client
