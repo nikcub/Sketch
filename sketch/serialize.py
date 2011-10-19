@@ -38,7 +38,7 @@ class GqlEncoder(simplejson.JSONEncoder):
         output[m] = obj[m]
       return output
 
-    elif isinstance(obj, sketch.users.User):
+    elif isinstance(obj, sketch.User):
       output = {}
       methods = ['id', 'username', 'name', 'email', 'picture', 'tw_username', 'fb_username', 'updated', 'created']
       for method in methods:
@@ -52,8 +52,9 @@ class GqlEncoder(simplejson.JSONEncoder):
         output['id'] = getattr(obj, "id")
       else:
         output['id'] = str(obj.key())
-      # output['id'] = getattr(obj, 'id')
-      output['url'] = str(obj.url)
+        # output['id'] = getattr(obj, 'id')
+      if hasattr(obj, 'url'):
+        output['url'] = str(obj.url)
       for field, value in properties:
         output[field] = getattr(obj, field)
       return output
