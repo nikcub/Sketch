@@ -77,15 +77,14 @@ class Request(webob.Request):
   """
 
 
-
-  
   # TODO implement the content types
   CONTENT_TYPES = ['html', 'json', 'xml']
 
   uri = property(lambda self: self.url)
   
   query = property(lambda self: self.query_string)
-  
+
+
   def __init__(self, environ):
     """Constructs a Request object from a WSGI environment.
 
@@ -109,6 +108,7 @@ class Request(webob.Request):
     self.registry = {}
     # A dictionary for variables used in rendering.
     self.context = {}
+
 
   def get(self, argument_name, default_value='', allow_multiple=False):
     """Returns the query or POST argument with the given name.
@@ -138,6 +138,7 @@ class Request(webob.Request):
       if allow_multiple and not default_value:
         return []
       return default_value
+
 
   def get_all(self, argument_name, default_value=None):
     """Returns a list of query or POST arguments with the given name.
@@ -170,6 +171,7 @@ class Request(webob.Request):
         param_value[i] = param_value[i].value
 
     return param_value
+
 
   def arguments(self):
     """Returns a list of the arguments provided in the query and/or POST.
