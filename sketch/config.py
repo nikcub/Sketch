@@ -129,3 +129,23 @@ class Config(dict):
     
   def save_config(self):
     stash.set(self.cache_key, self.data)
+  
+  @property
+  def is_debug(self):
+    return self.enviroments[self.set_enviro]['debug'] or False
+
+  @property  
+  def is_dev(self):
+    return self.set_enviro == 'dev'
+
+  @property  
+  def is_staging(self):
+    return self.set_enviro == 'staging'
+
+  @property  
+  def is_live(self):
+    return self.set_enviro == 'live'
+  
+  @property
+  def enviro(self):
+    return self.enviroments[self.set_enviro]
