@@ -24,7 +24,10 @@ class SketchException(Exception):
 
 class Application(object):
   """
-  Base Application Class
+  Sketch base Application class. Implements WSGI interface and will dispatch requests
+  
+  example.
+  
   """
 
   ALLOWED_METHODS = frozenset(['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'TRACE'])
@@ -72,6 +75,13 @@ class Application(object):
   active_instance = app = request = None
 
   def __init__(self, config_file = "sketch.yaml", app_name = None, debug = False, routes = None):
+    """Application object constructor
+    
+    :param config_file: (optional) full path to configuration file
+    :param app_name: (optional) name of application
+    :param debug: (optional) debug mode for the aplication
+    :param routes: (optional) default routes
+    """
 
     self.debug = debug or os.environ.get('SERVER_SOFTWARE', '').startswith('Dev')
 
@@ -109,41 +119,52 @@ class Application(object):
 
 
   def get_routes(self, routes = None):
+    """Imports routes for the application
+    
+    Returns a dictionary of routes imported from a module or file
+    
+    :param routes: (optional) path to module or object with routing info
+    """
     return self.import_app_module_new('routes', 'routes')
 
 
-
   def set_config_paths(self, config):
-    # TODO pre-load all template paths here from config
+    """Sets path information in the :class:`Config` object.
+    
+    Returns the new :class:`Config` object
+    
+    :param config: Config object to add path information to
+    """
     paths = {}
-    if not 'paths' in config:
+    if not 'paths' in config or type(config['paths']) != type({}):
       config['paths'] = {}
+
     paths['sketch_base_dir'] = sketch_dir = dirname(__file__)
-    paths['app_base_dir'] = app_dir = j_dir(sketch_dir, '..', self.app_name)
+    paths['site_base_dir'] = site_dir = j_dir(dirname(__file__), '..')
+    paths['app_base_dir'] = app_dir = j_dir(site_dir, self.app_name)
     paths['sketch_template_dir'] = j_dir(sketch_dir, self.sketch_template_folder)
     paths['app_template_basedir'] = j_dir(app_dir, self.sketch_template_folder)
+    paths['app_template_default'] = j_dir(app_dir, self.sketch_template_folder, 'default')
     
     for path in paths:
       p = os.path.normpath(paths[path])
-      if os.path.isdir(p) and path not in config['paths']:
+      if os.path.isdir(p) and not path in config['paths']:
         config['paths'][path] = p
-      
+    
+    for template in config['templates']:
+      p = os.path.normpath(j_dir(site_dir, config['templates'][template]))
+      if os.path.isdir(p):
+        config['paths']['template_' + template] = p
+
     return config
 
-  def set_package(self, package_dir):
-    # Append zip archives to path for zipimport
-    for filename in os.listdir(package_dir):
-      if filename.endswith((".zip", ".egg")):
-        sys.path.insert(0, "%s/%s" % (package_dir, filename))
-
-  def clear_path(self):
-    sys.path = [path for path in sys.path if 'site-packages' not in path]
 
   def set_vendor(self, vendor_dir = None):
     if not vendor_dir:
       vendor_dir = os.path.join(os.path.dirname(__file__), self.vendor_path)
     if os.path.isdir(vendor_dir):
       sys.path.insert(0, vendor_dir)
+
 
   def import_app_module_new(self, module, obj = None):
     # TODO work out what went wrong here
