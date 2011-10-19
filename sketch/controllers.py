@@ -1,9 +1,15 @@
-import os, logging, traceback, sys, cgi, datetime, urllib
+import sys
+import os
+import cgi
+import datetime
+import urllib
+import logging
+from os.path import isdir
+from os.path import join as dj
 
 import sketch
-
+from sketch.util import hasmethod, hasvar, getmethattr
 from google.appengine.ext import webapp
-
 from django.utils.timesince import timesince
 from django.utils.dateformat import format as django_format
 
@@ -81,36 +87,47 @@ class BaseController(sketch.RequestHandler):
 
   # TODO - fuck all this up and throw it away
 
-  def render(self, template_name, passed_vars, response_code = 200, response_type = False, prettyPrint = False):
-
+  def render(self, template_name, passed_vars, response_code = 200, 
+          response_type = False, prettyPrint = False, template_folder=None):
+    """Main render helper function. Wraps other rendering functions
+    
+    """
     if not response_type:
       response_type = self.request.response_type()
 
     prettyPrint = bool(self.request.get('prettyPrint', False))
     
-    if hasattr(self, 'template_wrapper'):
+    if hasmethod(self, 'template_wrapper'):
       passed_vars = self.template_wrapper(variables = passed_vars)
           
     if response_type in ['xml', 'json']:
-      serial_f = getattr(serialize, response_type)
+      serial_f = getattr(sketch.serialize, response_type)
       content = serial_f(passed_vars, pretty = prettyPrint)
       self.response.headers['Content-Type'] = "application/%s; charset=utf-8" % (response_type)
     else:
       passed_vars = self.get_template_vars(passed_vars)
       passed_vars = self.get_plugin_vars(passed_vars)
-      template_path = self.get_template_path(template_name)
+      # fixing..
+      template_path = self.get_template_dir(template_folder)
       content = self.render_jinja(template_path, template_name, passed_vars)
-
       
     self.render_content(content, response_code)
 
+
   def render_content(self, content, response_code = 200, headers = []):
+    """The actual function that will render content back into the response
+    
+    :param content: Content to be rendered
+    :param response_code: HTTP response code
+    :param headers: Response headers
+    """
     self.response.clear()
     if len(headers) > 0:
       for hn, hv in headers:
         self.response.headers[hn] = hv
     self.response.set_status(response_code)
     self.response.write(content)
+
 
   def render_error(self, message = False, code = 404):
     self.render('error', {
@@ -119,7 +136,21 @@ class BaseController(sketch.RequestHandler):
     }, code)
 
 
+  def render_admin(self, template_name, vars):
+    # TODO change this and make it *better*
+    vars['admin'] = True
+    template_path = self.get_template_path(template_name, 'admin')
+    content = self.render_jinja(template_path, template_name, vars)
+    self.response.clear()
+    self.response.set_status(200)
+    self.response.write(content)
+
   def render_blob(self, blob_key_or_info, filename=None):
+    """Render a file from the GAE blobstore
+    
+    :param blog_key_or_info: A key for the blog
+    :param filename: (optional) Name of file in user download
+    """
     if isinstance(blob_key_or_info, blobstore.BlobInfo):
       blob_key = blob_key_or_info.key()
       blob_info = blob_key_or_info
@@ -128,7 +159,6 @@ class BaseController(sketch.RequestHandler):
       blob_info = None
 
     self.response.headers[blobstore.BLOB_KEY_HEADER] = str(blob_key)
-
     del self.response.headers['Content-Type']
 
     def saveas(filename):
@@ -146,34 +176,31 @@ class BaseController(sketch.RequestHandler):
 
     self.response.clear()
 
-  def render_admin(self, template_name, vars):
-    # TODO change this and make it *better*
-    vars['admin'] = True
-    template_path = self.get_template_path(template_name, 'admin')
-    content = self.render_jinja(template_path, template_name, vars)
-    self.response.clear()
-    self.response.set_status(200)
-    self.response.write(content)
 
-
-  def get_template_path(self, template_name, template_type = 'app'):
-    if hasattr(self, 'template_folder'):
-      template_type = self.template_folder
-
-    base = os.path.dirname(__file__)
-    if template_type in self.app.config['templates']:
-      template_dir = self.app.config['templates'][template_type]
+  def get_template_dir(self, template_folder=None):
+    """Given a template name return a full path to the template directory.
+    Template folders are alises defined in config or within the applications.
+    
+    :param template_name: name of template
+    :param template_folder: template folder
+    """
+    if not template_folder and hasattr(self, 'template_folder'):
+      template_folder = getmethattr(self, 'template_folder')
+      
+    if template_folder in self.app.config.paths.templates:
+      template_dir = self.app.config.paths.templates[template_folder]
+    elif 'app_template_basedirs' in self.app.config.paths:
+      if isdir(dj(self.app.config.paths['app_template_basedir'], template_folder)):
+        template_dir = dj(self.app.config.paths['app_template_basedir'], template_folder)
+    elif 'app_template_default' in self.app.config['paths']:
+      template_dir = self.app.config['paths']['app_template_default']
     else:
-      template_dir = os.path.join('app', 'templates')
-    templates_path = os.path.join(base, '..', template_dir)
-    templates_path = os.path.realpath(templates_path)
-    templates_path = os.path.normpath(templates_path)
-    if not os.path.isdir(templates_path):
+      raise Exception("Could not find template to use: given %s" % template_folder)
+
+    if not os.path.isdir(template_dir):
       raise Exception("Not a template path: %s. Please specify the template path in config", templates_path)
-    template_path = os.path.join(templates_path, "%s.html" % template_name)
-    if not os.path.isfile(template_path):
-      raise Exception("Not a template: %s", template_path)
-    return templates_path
+
+    return template_dir
 
 
   def render_jinja(self, template_path, template_name, vars):
@@ -194,7 +221,7 @@ class BaseController(sketch.RequestHandler):
     vars = self.get_template_vars(vars)
     vars = self.get_plugin_vars(vars)
     if response_type in ['xml', 'json']:
-        serial_f = getattr(serialize, response_type)
+        serial_f = getattr(sketch.serialize, response_type)
         content = serial_f(vars)
         self.response.headers['Content-Type'] = "application/%s; charset=utf-8" % (response_type)
     else:
