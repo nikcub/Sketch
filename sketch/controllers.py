@@ -102,9 +102,6 @@ class BaseController(sketch.RequestHandler):
       template_path = self.get_template_dir(template_folder)
       content = self.render_jinja(template_path, template_name, passed_vars)
     
-    logging.info("%s - %s" % (template_path, template_name))
-    logging.info(content)
-    
     self.render_content(content, response_code)
 
 
@@ -211,7 +208,10 @@ class BaseController(sketch.RequestHandler):
     """
     if not template_folder and hasattr(self, 'template_folder'):
       template_folder = getmethattr(self, 'template_folder')
-      
+    
+    if not template_folder:
+      template_folder = 'default'
+
     if template_folder in self.app.config.paths.templates:
       template_dir = self.app.config.paths.templates[template_folder]
     elif 'app_template_basedir' in self.app.config.paths:

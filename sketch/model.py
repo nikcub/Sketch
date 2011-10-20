@@ -1,5 +1,5 @@
-from google.appengine.ext import webapp
 from google.appengine.ext import db
+from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
 import logging
 
