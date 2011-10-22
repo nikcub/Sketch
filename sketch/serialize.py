@@ -32,7 +32,7 @@ class GqlEncoder(simplejson.JSONEncoder):
       output['displayError'] = "%s" % (obj.__class__.__name__)
       return output
     
-    elif isinstance(obj, sketch.session.Session):
+    elif isinstance(obj, sketch.Session):
       output = {}
       for m in obj:
         output[m] = obj[m]
