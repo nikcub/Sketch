@@ -6,10 +6,10 @@ from base64 import b64encode, b64decode
 
 try:
   from Crypto.Hash import HMAC as hmac, SHA as sha1
-  from Crypto.Random import getrandbits, randint
+  from Crypto.Random.random import getrandbits, randint, choice
 except ImportError:
   import hmac
-  from random import randint
+  from random import randint, choice
   try:
     from hashlib import sha1
   except ImportError:
@@ -24,6 +24,7 @@ VOWELS = ['a','e','i','o','u']
 
 def hash_password(password, salt):
   return gen_pbkdf1(password, salt, iterations=20000)
+
 
 def gen_sha1(password, salt = "abcdefghijklmnopqrstuvwxyz", iterations=10000):
   """Python implementation for a slow password hash
@@ -53,8 +54,17 @@ def gen_salt(length=64):
   return "".join([pack("@H", randint(0, 0xffff)) for i in range(4)])
 
 
-def gen_password():
-  pass
+def gen_password(length=8, allowed_chars=""):
+  """Generate a random password
+  
+  :param length: (Optional) Password length
+  :param allowed_chars: (Optional) String of allowed chars
+  """
+  if len(allowed_chars) > 0:
+    char_set = allowed_chars
+  else:
+    char_set = LOWERCASE + UPPERCASE + NUMBERS
+  return ''.join([choice(char_set) for i in range(length)])[:length]
 
 
 def file_hash(filedata):
@@ -76,11 +86,12 @@ def gen_password_old(length = 10, num_punc = 1, sequence = None):
   # print locals()
   return "".join([globals()[i][randint(0, len(globals()[i]) - 1)] for i in seq])[0:length]
 
+
 def test():
-  password = gen_password_old(6)
+  password = gen_password(8)
   salt = gen_salt()
   t = gen_pbkdf1(password, salt, iterations = 100000)
-  print "Hash %s with %s as %s (%s)" % (password, salt, t, b64encode(t))
+  print "Hash %s with %s as %s" % (password, b64encode(salt), b64encode(t))
 
 
 if __name__ == '__main__':

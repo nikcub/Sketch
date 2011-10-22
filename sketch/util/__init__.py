@@ -96,9 +96,27 @@ def urlunsplit(scheme=None, netloc=None, path=None, query=None, fragment=None):
 
   return urlparse.urlunsplit((scheme, netloc, path, query, fragment))
 
+def python_websafe(text):
+    return text.replace('&', "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
+def python_websafe_json(text):
+    return text.replace('&', "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+def _force_unicode(text):
+  if text == None:
+    return u''
 
+  try:
+    text = unicode(text, 'utf-8')
+  except UnicodeDecodeError:
+    text = unicode(text, 'latin1')
+  except TypeError:
+    text = unicode(text)
+  return text
+
+def _force_utf8(text):
+  return str(_force_unicode(text).encode('utf8'))
+    
 def escape(s, quote=False):
   """Replace special characters "&", "<" and ">" to HTML-safe sequences.  If
   the optional flag `quote` is `True`, the quotation mark character (") is
