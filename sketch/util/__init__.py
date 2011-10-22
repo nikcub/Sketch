@@ -19,7 +19,7 @@ import re
 import hashlib
 
 from .object import hasmethod, hasvar, getmethattr
-from .security import bcrypt, file_hash, generate_password
+from .security import hash_password, gen_sha1, gen_pbkdf1, gen_salt, gen_password, file_hash, gen_password_old
 
 from sketch.vendor.BeautifulSoup import BeautifulSoup
 import sketch.vendor.feedparser
@@ -47,8 +47,6 @@ def extract_dataurl(dataurl):
   import base64
   img_dat = base64.decodestring(img_dat_enc)
   return (img_dat, img_type)
-
-
 
 
 def urlunsplit(scheme=None, netloc=None, path=None, query=None, fragment=None):
