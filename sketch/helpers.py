@@ -1,8 +1,38 @@
+#!/usr/bin/env python
+#
+# Copyright (c) 2010-2011, Nik Cubrilovic. All rights reserved.
+#
+# <nikcub@gmail.com> <http://nikcub.appspot.com>  
+#
+# Licensed under a BSD license. You may obtain a copy of the License at
+#
+#     http://nikcub.appspot.com/bsd-license
+#
+"""
+  Sketch - helpers.py
+
+  Template helpers
+
+  This source file is subject to the new BSD license that is bundled with this 
+  package in the file LICENSE.txt. The license is also available online at the 
+  URL: <http://nikcub.appspot.com/bsd-license.txt>
+
+  :copyright: Copyright (C) 2011 Nik Cubrilovic and others, see AUTHORS
+  :license: new BSD, see LICENSE for more details.
+"""
+
+import os
+import sys
 import datetime
 import time
 
+os.environ['DJANGO_SETTINGS_MODULE'] = 'sketch.django_settings'
+from google.appengine.dist import use_library
+use_library('django', '1.2')
+
 from django.utils.tzinfo import LocalTimezone
 from django.utils.translation import ungettext, ugettext
+from django.utils.dateformat import format as tformat
 
 def timesince(d, now=None):
     """
