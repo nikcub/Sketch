@@ -54,9 +54,10 @@ __version__ = '0.0.1'
 __author__ = 'Nik Cubrilovic <nikcub@gmail.com>'
 
 import cgi
-import sketch
 import webob
 import re
+import sketch
+import urlparse
 
 RE_FIND_GROUPS = re.compile('\(.*?\)')
 _CHARSET_RE = re.compile(r';\s*charset=([^;\s]*)', re.I)
@@ -441,7 +442,7 @@ class RequestHandler(object):
 
     .. seealso:: :meth:`redirect_to`.
     """
-    absolute_url = str(sketch.util.urlparse.urljoin(self.request.uri, uri))
+    absolute_url = str(urlparse.urljoin(self.request.uri, uri))
     if permanent:
         code = 301
 
