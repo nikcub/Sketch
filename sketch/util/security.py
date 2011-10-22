@@ -81,8 +81,6 @@ def test():
   salt = gen_salt()
   t = gen_pbkdf1(password, salt, iterations = 100000)
   print "Hash %s with %s as %s (%s)" % (password, salt, t, b64encode(t))
-  
-  print len(salt)
 
 
 if __name__ == '__main__':
