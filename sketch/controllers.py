@@ -9,9 +9,6 @@ from os.path import join as dj
 
 import sketch
 from sketch.util import hasmethod, hasvar, getmethattr
-from google.appengine.ext import webapp
-from django.utils.timesince import timesince
-from django.utils.dateformat import format as django_format
 
 
 class BaseController(sketch.RequestHandler):
@@ -79,7 +76,7 @@ class BaseController(sketch.RequestHandler):
 
 
   def render(self, template_name, passed_vars, response_code = 200, 
-          response_type = False, prettyPrint = False, template_folder=None):
+          response_type=False, prettyPrint=False, template_set='app', template_theme=None):
     """Main render helper function. Wraps other rendering functions
     
     """
@@ -96,11 +93,15 @@ class BaseController(sketch.RequestHandler):
       content = serial_f(passed_vars, pretty = prettyPrint)
       self.response.headers['Content-Type'] = "application/%s; charset=utf-8" % (response_type)
     else:
+      sketch.jinja.setup(self.config.paths.templates)
       passed_vars = self.get_template_vars(passed_vars)
       passed_vars = self.get_plugin_vars(passed_vars)
       # fixing..
-      template_path = self.get_template_dir(template_folder)
-      content = self.render_jinja(template_path, template_name, passed_vars)
+      
+      if hasattr(self, 'template_folder'):
+        template_theme = getmethattr(self, 'template_folder')
+      
+      content = sketch.jinja.render(template_name, passed_vars, template_theme=template_theme, template_set=template_set)
     
     self.render_content(content, response_code)
 
@@ -124,7 +125,7 @@ class BaseController(sketch.RequestHandler):
     self.render('error', {
         'code': '%d - %s' % (code, self.response.http_status_message(code)),
         'message': message
-    }, code)
+    }, code, template_folder='sketch')
 
 
   def render_admin(self, template_name, vars):
@@ -134,6 +135,56 @@ class BaseController(sketch.RequestHandler):
   def render_sketch(self, template_name, vars):
     vars['admin'] = True
     return self.render(template_name, vars, template_folder='sketch')
+
+
+  def get_javascripts(self, template_vars):
+    """Will read the javascripts to be included, create the tags and include
+    them as part of the template variables
+    
+    :param template_vars: Template variable dict
+    """
+    if not hasattr(self, 'javascripts'):
+      return template_vars
+    
+    scripts_dict = getmethattr(self, 'javascripts')
+    js_tmp = ""
+
+    for script_d in scripts_dict:
+      for script_src in scripts_dict[script_d]['src']:
+        js_tmp = js_tmp + "<script type=\"text/javascript\" src=\"%s\"></script>\n" % script_src
+
+    template_vars['javascripts'] = js_tmp
+    return template_vars
+
+
+  def get_template_vars(self, vars):
+    if type(vars) != dict:
+      vars = {'_vars': vars}
+      
+    additional = {
+      'session': self.session,
+      'user': False,
+        # 'admin': users.is_current_user_admin(),
+        # 'user': users.get_current_user(),
+        # 'logout': users.create_logout_url('/'),
+        # 'login': users.create_login_url('/'),
+        # 'title': 'test'
+        # 'title': self.conf_get('title')
+    }
+
+    if 'auth' in self.session:
+      additional['loggedin'] = True
+      additional['username'] = self.session.get('username', '')
+      additional['user'] = self.user
+
+    if self.message:
+      additional['message'] = self.message
+      additional['message_type'] = self.message_type
+      additional['message_class'] = self.message_class
+
+    additional = self.get_javascripts(additional)
+
+    return dict(vars, **additional)
 
 
   def render_blob(self, blob_key_or_info, filename=None):
@@ -168,92 +219,9 @@ class BaseController(sketch.RequestHandler):
     self.response.clear()
 
 
-  def render_jinja(self, template_path, template_name, vars):
-    from sketch.vendor import jinja2
-    
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
-    env.filters['timesince'] = timesince
-    env.filters['tformat'] = django_format
-    template = env.get_template(template_name + '.html')
-    return template.render(vars)
-
-
-  def render_django(self, template_name, vars, response_type = False):
-    from google.appengine.ext.webapp import template
-    
-    if not response_type:
-        response_type = self.request.response_type()
-    vars = self.get_template_vars(vars)
-    vars = self.get_plugin_vars(vars)
-    if response_type in ['xml', 'json']:
-        serial_f = getattr(sketch.serialize, response_type)
-        content = serial_f(vars)
-        self.response.headers['Content-Type'] = "application/%s; charset=utf-8" % (response_type)
-    else:
-        content = template.render(self.get_template_path(template_name, response_type), vars)
-    return content
-
-
   #---------------------------------------------------------------------------
   #   helpers
   #---------------------------------------------------------------------------
-
-
-  def get_template_dir(self, template_folder=None):
-    """Given a template name return a full path to the template directory.
-    Template folders are alises defined in config or within the applications.
-    
-    :param template_name: name of template
-    :param template_folder: template folder
-    """
-    if not template_folder and hasattr(self, 'template_folder'):
-      template_folder = getmethattr(self, 'template_folder')
-    
-    if not template_folder:
-      template_folder = 'default'
-
-    if template_folder in self.app.config.paths.templates:
-      template_dir = self.app.config.paths.templates[template_folder]
-    elif 'app_template_basedir' in self.app.config.paths:
-      if isdir(dj(self.app.config.paths['app_template_basedir'], template_folder)):
-        template_dir = dj(self.app.config.paths['app_template_basedir'], template_folder)
-    elif 'app_template_default' in self.app.config['paths']:
-      template_dir = self.app.config['paths']['app_template_default']
-    else:
-      raise Exception("Could not find template to use: given %s" % template_folder)
-
-    if not os.path.isdir(template_dir):
-      raise Exception("Not a template path: %s. Please specify the template path in config", templates_path)
-
-    return template_dir
-
-
-  def get_template_vars(self, vars):
-    if type(vars) != dict:
-      vars = {'_vars': vars}
-      
-    additional = {
-      'session': self.session,
-      'user': False,
-        # 'admin': users.is_current_user_admin(),
-        # 'user': users.get_current_user(),
-        # 'logout': users.create_logout_url('/'),
-        # 'login': users.create_login_url('/'),
-        # 'title': 'test'
-        # 'title': self.conf_get('title')
-    }
-
-    if 'auth' in self.session:
-      additional['loggedin'] = True
-      additional['username'] = self.session.get('username', '')
-      additional['user'] = self.user
-
-    if self.message:
-      additional['message'] = self.message
-      additional['message_type'] = self.message_type
-      additional['message_class'] = self.message_class
-
-    return dict(vars, **additional)
 
 
   def get_plugin_vars(self, vars):
@@ -276,29 +244,38 @@ class BaseController(sketch.RequestHandler):
     return params
 
 
-  def handle_exception(self, exception = None, errno = None, strerror = None):
-    """Called if this handler throws an exception during execution.
+  #---------------------------------------------------------------------------
+  #   Rendering Engines
+  #---------------------------------------------------------------------------
 
-    The default behavior is to call self.error(500) and print a stack trace
-    if debug_mode is True.
 
-    Args:
-    exception: the exception that was thrown
-    debug_mode: True if the web application is running in debug mode
+  def render_django(self, template_name, vars, response_type = False):
+    """Given a template name and variables will render the template using
+    the default Django template rendering engine 
+    
+    :param template_name: Name of template
+    :param vars: Template variables
+    
+    @TODO clean out the 'get_template_path' stuff and put that in render
+    @TODO this should only be rendering, none of the fancy content stuff
     """
-    logging.info("*********** HANDLER EXCEPTION ******************")
-    raise
-    return False
-    self.error(500)
-    logging.exception(exception)
-    lines = ""
-    if self.config['debug']:
-      import traceback
-      lines = ''.join(traceback.format_exception(*sys.exc_info()))
-    self.render_error(message = lines, code = 500)
+    pass
+    # from google.appengine.dist import use_library
+    from google.appengine.ext.webapp import template
+    
+    if not response_type:
+        response_type = self.request.response_type()
+    vars = self.get_template_vars(vars)
+    vars = self.get_plugin_vars(vars)
+    if response_type in ['xml', 'json']:
+        serial_f = getattr(sketch.serialize, response_type)
+        content = serial_f(vars)
+        self.response.headers['Content-Type'] = "application/%s; charset=utf-8" % (response_type)
+    else:
+        content = template.render(self.get_template_path(template_name, response_type), vars)
+    return content
 
 
-  
   #---------------------------------------------------------------------------
   #   Conveniance Methods
   #---------------------------------------------------------------------------
@@ -321,7 +298,7 @@ class BaseController(sketch.RequestHandler):
     
   @property
   def env(self):
-    return self.config.enviro['name'] or None
+    return self.config.enviro or None
 
   @property
   def enviro(self):
@@ -329,6 +306,10 @@ class BaseController(sketch.RequestHandler):
 
 
 class AdminController(BaseController):
+  """A custom controller that restricts permissions to only those users who are
+  an administrator
+  
+  """
 
   template_path = os.path.join('')
 
