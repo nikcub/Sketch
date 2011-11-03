@@ -6,7 +6,7 @@ import oauth
 
 from google.appengine.ext import db
 
-class User(sketch.Model):
+class User(sketch.db.Model):
     username = db.StringProperty(required=True)
     name = db.StringProperty()
     email = db.EmailProperty()
@@ -119,7 +119,7 @@ class User(sketch.Model):
         )
         ua.put()
 
-class UserActivity(sketch.Model):
+class UserActivity(sketch.db.Model):
     username = db.ReferenceProperty(User, collection_name="activity")
     action = db.StringProperty(choices = set(["login", "logout", "link_twitter", "link_facebook"]))
     ip = db.StringProperty()
@@ -131,34 +131,7 @@ class UserActivity(sketch.Model):
         ua = UserActivity(
         )
 
-oauth_config = {
-    "twitter_imgahz": {
-      "consumer_key": "E42wNu4ZKX24x4T47MIw",
-      "consumer_secret": "5SdrOv8wseUCQSGbB2IDUjyRoSvtPmc9tBjBSm4WREk",
-    },
-    "twitter_webwall": {
-        "consumer_key": "CdkFQYSXbud586od8N0Q",
-        "consumer_secret": "5e9b3a9wtXwx8ClHhHEKw5xTMjSKiNxLY9V3bm7ko",
-        "callback_url": "%s/login/twitter/callback",
-    },
-    "twitter_evergreen": {
-        "consumer_key": "lp9lcbM5JCRMOTCJaFETzw",
-        "consumer_secret": "F5J7XDCubI4koepR3RRizQrTb6JPRYnGBOyAEfsph4",
-        "callback_url": "%s/login/twitter/callback",
-        "oauth_host": "https://api.twitter.com/",
-        "request_token_url": "/oauth/request_token",
-        "access_token_url": "/oauth/access_token",
-        "authorize_url": "/oauth/authorize",
 
-    },
-    "facebook_evergreen": {
-        "app_id": "204986469525572",
-        "api_key": "3ddcb90c83d946378158e0c7150db076",
-        "api_secret": "36b43532d1e179bd7afc0f3c508f0a3c",
-        "oauth_host": "https://",
-        "callback_url": "%s/login/twitter/callback",
-    }
-}
 
 class LoginHandler(sketch.BaseController):
     tw_consumer_key = "CdkFQYSXbud586od8N0Q"
