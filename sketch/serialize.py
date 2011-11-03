@@ -9,6 +9,7 @@ from google.appengine.ext import db
 
 #this is a mod on the orinal file for some reason it includes its own simplejson files i have ref django!
 from django.utils import simplejson
+from sketch.helpers.dateformat import utc_timestamp, timestamp
 
 class GqlEncoder(simplejson.JSONEncoder):
   """Extends JSONEncoder to add support for GQL results and properties.
@@ -60,7 +61,7 @@ class GqlEncoder(simplejson.JSONEncoder):
       return output
 
     elif isinstance(obj, datetime.datetime):
-      return int(time.mktime(obj.timetuple()))
+      return utc_timestamp(obj)
 
       # return int(time.mktime(datetime.datetime.now().timetuple()))
       output = {}
