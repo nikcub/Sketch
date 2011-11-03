@@ -58,7 +58,7 @@
 """
 import sys
 import logging
-from sketch.util import escape
+from sketch.util.safestring import escape
 
 HTTP_STATUS_CODES = {
         100:        'Continue',
@@ -126,10 +126,9 @@ class HTTPException(Exception):
         traceback = None
         content_type = None
 
-        def __init__(self, content_type='text/html', description=None, traceback=None):
+        def __init__(self, content_type='html', description=None, traceback=None):
                 Exception.__init__(self, '%d %s' % (self.code, self.name))
                 self.content_type = content_type
-                logging.info("EXCEPTION CONTENT TYPE IS %s" % content_type)
                 if description is not None:
                     self.description = description
                 if traceback is not None:
