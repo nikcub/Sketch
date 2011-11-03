@@ -1,5 +1,9 @@
-sketch
+== Sketch ==
 
-web app framework used in other projects
+*Version: 0.2-alpha*
 
-in development. check back later for release.
+Python web application framework for Google App Engine and other PaaS platforms.
+
+== Release ==
+
+Currently in development
