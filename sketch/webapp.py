@@ -400,32 +400,6 @@ class RequestHandler(object):
     return self.request.is_ajax()
 
 
-  def error(self, code):
-    """Clears the response output stream and sets the given HTTP error
-    code. This doesn't stop code execution; the response is still
-    available to be filled.
-
-    :param code:
-        HTTP status error code (e.g., 501).
-    """
-    self.response.set_status(code)
-    self.response.clear()
-
-
-  def abort(self, code, *args, **kwargs):
-    """Raises an :class:`HTTPException`. This stops code execution,
-    leaving the HTTP exception to be handled by an exception handler.
-
-    :param code:
-        HTTP status error code (e.g., 404).
-    :param args:
-        Positional arguments to be passed to the exception class.
-    :param kwargs:
-        Keyword arguments to be passed to the exception class.
-    """
-    abort(code, *args, **kwargs)
-
-
   def redirect(self, uri, permanent=False, abort=False, code=302):
     """Issues an HTTP redirect to the given relative URL. This won't stop
     code execution unless **abort** is True. A common practice is to
@@ -594,34 +568,34 @@ class RequestHandler(object):
 
 
 class RedirectHandler(RequestHandler):
-    """Redirects to the given URL for all GET requests. This is meant to be
-    used when defining URL routes. You must provide at least the keyword
-    argument *url* in the route default values. Example::
+  """Redirects to the given URL for all GET requests. This is meant to be
+  used when defining URL routes. You must provide at least the keyword
+  argument *url* in the route default values. Example::
 
-        def get_redirect_url(handler, *args, **kwargs):
-            return handler.url_for('new-route-name')
+    def get_redirect_url(handler, *args, **kwargs):
+        return handler.url_for('new-route-name')
 
-        app = WSGIApplication([
-            Route(r'/old-url', RedirectHandler, defaults={'url': '/new-url'}),
-            Route(r'/other-old-url', RedirectHandler, defaults={'url': get_redirect_url}),
-        ])
+    app = WSGIApplication([
+        Route(r'/old-url', RedirectHandler, defaults={'url': '/new-url'}),
+        Route(r'/other-old-url', RedirectHandler, defaults={'url': get_redirect_url}),
+    ])
 
-    Based on idea from `Tornado`_.
+  Based on idea from `Tornado`_.
+  """
+  def get(self, *args, **kwargs):
+    """Performs the redirect. Two keyword arguments can be passed through
+    the URL route:
+
+    - **url**: A URL string or a callable that returns a URL. The callable
+      is called passing ``(handler, *args, **kwargs)`` as arguments.
+    - **permanent**: If False, uses a 301 redirect instead of a 302
+      redirect Default is True.
     """
-    def get(self, *args, **kwargs):
-        """Performs the redirect. Two keyword arguments can be passed through
-        the URL route:
+    url = kwargs.pop('url', '/')
+    permanent = kwargs.pop('permanent', True)
 
-        - **url**: A URL string or a callable that returns a URL. The callable
-          is called passing ``(handler, *args, **kwargs)`` as arguments.
-        - **permanent**: If False, uses a 301 redirect instead of a 302
-          redirect Default is True.
-        """
-        url = kwargs.pop('url', '/')
-        permanent = kwargs.pop('permanent', True)
+    if callable(url):
+      url = url(self, *args, **kwargs)
 
-        if callable(url):
-            url = url(self, *args, **kwargs)
-
-        self.redirect(url, permanent=permanent)
+    self.redirect(url, permanent=permanent)
 
