@@ -4,12 +4,9 @@ import sys
 import logging
 import traceback
 
-from os.path import join as j_dir
-from os.path import dirname
-
 import sketch
 
-from .util import import_string
+from sketch.util.modtools import import_string
 
 from google.appengine.ext.webapp.util import run_bare_wsgi_app
 from google.appengine.ext.webapp import WSGIApplication
@@ -35,14 +32,6 @@ class Application(object):
   static_uri = '/static'
 
   vendor_path = 'vendor'
-
-  app_template_folder = 'templates'
-
-  sketch_template_folder = 'templates'
-
-  app_template_path = None
-
-  sketch_template_path = None
 
   # pointer to app instance
   app = None
@@ -72,26 +61,30 @@ class Application(object):
   #: Request variables.
   active_instance = app = request = None
 
-  def __init__(self, config_file = "sketch.yaml", app_name = None, debug = False, routes = None):
-    """Application object constructor
+  def __init__(self, config=None, appname=None, debug=False, routes=None):
+    """Application object constructor returns :mod:`Sketch` application
     
     :param config_file: (optional) full path to configuration file
+    :type config_file: string
     :param app_name: (optional) name of application
     :param debug: (optional) debug mode for the aplication
     :param routes: (optional) default routes
+    :return: :class:`myclass` 
+    :rtype: sketch.Application
+    :raises sketch.HttpNotFound: If route not found
+    
+    @TODO phase out config_file and detect if string/path etc.
     """
     # Config
     # @TODO try loading default config if none specified
     # @TODO intelligent caching so that we don't always reparse config
-    if not os.path.isfile(config_file):
-      raise Exception("Not a valid project_path %s" % config_file)
-    self.config = sketch.Config(config_file, refresh = debug)
 
-    # Appname
-    # @TODO do away with appname
-    self.app_name = self.config.get('appname', False) or app_name
-    if not self.app_name:
-      raise Exception, "Could not get application name"
+    if isinstance(config, sketch.Config):
+      self.config = config
+    else:
+      self.config = sketch.Config(config)
+    
+    self.appname = appname or self.config.get('appname', False) or "app"
 
     # Plugins
     if 'plugins' in self.config:
@@ -99,13 +92,13 @@ class Application(object):
       self._init_plugins(plugins)
 
     # Routing
-    self.routes = self.get_routes()
+    if type(routes) == type([]):
+      self.routes = routes
+    else:
+      self.routes = self.get_routes()
     self.router = self.router_class(self, self.routes)
-
+    
     # Config
-    self.config = self.set_config_paths(self.config)
-    self.config = self.set_config_template_paths(self.config)
-    # @TODO fix save config
     # self.config.save_config()
 
     self.set_vendor()
@@ -124,7 +117,7 @@ class Application(object):
     return self.import_app_module_new('routes', 'routes')
 
 
-  def set_environ(self, enviroments):
+  def set_environ(self):
     """Returns the running environment and sets debug options, hostname etc.
     
     :param env: Defined environments in config
@@ -134,9 +127,9 @@ class Application(object):
     self.config.appid = app_identity.get_application_id()
     self.config.gae_hostname = app_identity.get_default_version_hostname()
     
-    for env in enviroments:
-      self.config['enviroments'][env]['name'] = env
-      if 'hosts' in enviroments[env] and hostname in enviroments[env]['hosts']:
+    for env in self.config.enviroments:
+      self.config.enviroments[env]['name'] = env
+      if 'hosts' in self.config.enviroments[env] and hostname in self.config.enviroments[env]['hosts']:
         self.config.set_enviro = env
         enviro_set = True
     
@@ -153,57 +146,6 @@ class Application(object):
     """
     if debug:
       logging.getLogger().setLevel(logging.INFO)
-
-
-  def set_config_paths(self, config):
-    """Sets path information in the :class:`Config` object.
-    
-    Returns the new :class:`Config` object
-    
-    :param config: Config object to add path information to
-    """
-    config = self.assure_obj_child_dict(config, 'paths')
-    
-    paths = {}
-    paths['sketch_base_dir'] = sketch_dir = dirname(__file__)
-    paths['site_base_dir'] = site_dir = j_dir(dirname(__file__), '..')
-    paths['app_base_dir'] = app_dir = j_dir(site_dir, self.app_name)
-    paths['sketch_template_dir'] = j_dir(sketch_dir, self.sketch_template_folder)
-    paths['app_template_basedir'] = j_dir(app_dir, self.sketch_template_folder)
-    paths['app_template_default'] = j_dir(app_dir, self.sketch_template_folder, 'default')
-    
-    for path in paths:
-      p = os.path.normpath(paths[path])
-      if os.path.isdir(p) and not path in config['paths']:
-        config['paths'][path] = p
-
-    return config
-
-
-  def set_config_template_paths(self, config):
-    """Sets the paths to templates in the config
-    
-    Returns a new :class:`Config` object
-    
-    :param config: Config object
-    """
-    config['paths'] = self.assure_obj_child_dict(config['paths'], 'templates')
-    templates = {}
-
-    for template in config.templates:
-      p = os.path.normpath(j_dir(config.paths.site_base_dir, config.templates[template]))
-      if os.path.isdir(p):
-        config['paths']['templates'][template] = p
-    
-    return config
-
-
-  def assure_obj_child_dict(self, obj, var):
-    """Assure the object has the specified child dict
-    """
-    if not var in obj or type(obj[var]) != type({}):
-      obj[var] = {}
-    return obj
 
 
   def set_vendor(self, vendor_dir = None):
@@ -302,55 +244,35 @@ class Application(object):
     # warmup cache etc.
 
 
-  def handle_exception(self, request, response, e, environ):
-    """
-    Will convert an exception into a rendered error message
-    """
-    logging.exception(e)
-
-    if self.debug:
-      tb = ''.join(traceback.format_exception(*sys.exc_info()))
-    else:
-      tb = ""
-
-    try:
-      content = self.render_exception({
-          'status_code': e.code,
-          'status_message': e.name,
-          'message': e.get_description(environ),
-          'traceback': tb,
-      })
-      response.set_status(e.code)
-      response.out.write(content)
-      return response
-    except:
-      return sketch.exception.InternalServerError(traceback = tb)
-
   # TODO implement url_for()
   def url_for(self):
     pass
 
+
   def dispatch(self, match, request, response, method = None):
-    """
-    docstring for dispatch
+    """docstring for dispatch
+    
+    @TODO lots - see body
     """
     handler_class, args, kwargs = match
     method = method or request.method.lower().replace('-', '_')
 
     if isinstance(handler_class, basestring):
-        if handler_class not in self._handlers:
-            self._handlers[handler_class] = sketch.util.import_string(handler_class)
-        handler_class = self._handlers[handler_class]
+      if handler_class not in self._handlers:
+        # @TODO implement import_controller
+        self._handlers[handler_class] = import_string(handler_class)
+      handler_class = self._handlers[handler_class]
 
-    # def handler class
+    # 1. Initiate controller
     handler = handler_class(self, request, response)
 
-    # def handler middleware
+    # 2. Attach middleware
+    # @TODO Implement functions for this and caches
     handler.config = self.config
-
     session = sketch.Session(handler, 'sess')
     handler.attach_session(session)
 
+    # 3. Attach user
     if 'key' in handler.session:
       logging.info(handler.session)
       try:
@@ -362,7 +284,7 @@ class Application(object):
     else:
       handler.user = False
 
-    #  def handler plugins
+    # 4. Register plugins
     if self.plugins_registered:
       if hasattr(handler, 'plugin_register'):
         for pl in self._Plugins:
@@ -370,40 +292,33 @@ class Application(object):
       else:
         logging.error("Handler %s does not support plugin resitration" % handler.__name__)
 
-    # run prehook
+    # 5. Pre hook call
     if hasattr(handler, 'pre_hook'):
       handler.pre_hook()
+    
+    if not hasattr(handler, method):
+      raise sketch.exception.NotImplemented()
+    
+    # 6. Main controller method call
+    logging.info("Calling: %s %s %s %s" % (handler, method, args, kwargs))
+    getattr(handler, method, None)(*args, **kwargs)
 
-    try:
-      logging.info("Calling: %s %s %s %s" % (handler, method, args, kwargs))
-      view_func = getattr(handler, method, None)
-      if view_func is None:
-        valid = ', '.join(get_valid_methods(self))
-        raise Exception('not implemented')
-        # TODO implment 'not implented 405 error'
-        # self.abort(405, headers=[('Allow', valid)])
-
-      view_func(*args, **kwargs)
-
-    except Exception, e:
-      if method == 'handle_exception':
-        raise
-
-      handler.handle_exception(e, self.debug)
-
+    # 7. Post hook call
     if hasattr(handler, 'post_hook'):
       handler.post_hook()
 
 
   def wsgi_app(self, environ, start_response):
-    """Called by WSGI when a request comes in."""
+    """Called by WSGI when a request comes in.
+    
+    """
     Application.active_app = Application.app = self
     Application.request = request = self.request_class(environ)
     response = self.response_class()
 
     if 'enviroments' in self.config:
-      self.set_environ(self.config.enviroments)
-      
+      self.set_environ()
+    
     try:
       if request.method not in self.ALLOWED_METHODS:
         raise sketch.exception.NotImplemented()
@@ -417,23 +332,21 @@ class Application(object):
     except sketch.exception.HTTPException, response:
       pass
     except Exception, e:
-      try:
-        response = self.handle_exception(request, response, e, environ)
-      except sketch.exception.HTTPException, e:
-        response = e
-      except Exception, e:
-        # Error wasn't handled so we have nothing else to do.
-        logging.exception(e)
-        if self.debug:
-          raise
-        response = sketch.exception.InternalServerError()
+      logging.exception(e)
+      if self.config.is_dev_server:
+        tb = ''.join(traceback.format_exception(*sys.exc_info()))
+      else:
+        tb = 'None'
+      response = sketch.exception.InternalServerError(traceback = tb, content_type=request.response_type())
     finally:
       Application.active_app = Application.app = Application.request = None
 
     return response(environ, start_response)
 
+
   def run_appengine(self, bare=False):
     run_bare_wsgi_app(self)
+
 
   def __call__(self, environ, start_response):
     return self.wsgi_app(environ, start_response)
