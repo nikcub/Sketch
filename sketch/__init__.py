@@ -28,7 +28,7 @@ else:
 
 import exception
 import util
-import jinja
+from templating import jinja
 import db
 
 from .webapp import Request, Response, RequestHandler, RedirectHandler
